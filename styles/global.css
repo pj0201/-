@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* カスタムスタイル */
+body {
+  @apply bg-gray-50;
+}
+
+.metric-positive {
+  @apply text-green-600;
+}
+
+.metric-negative {
+  @apply text-red-600;
+}
+
+.financial-card {
+  @apply bg-white rounded-lg shadow hover:shadow-md transition-shadow;
+}
