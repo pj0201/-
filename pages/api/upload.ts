@@ -11,43 +11,6 @@ function isAllowedFile(filename: string): boolean {
   return allowedExtensions.includes(ext);
 }
 
-// 仮の分析処理: 実際はここでファイル内容を解析し、指標を算出する
-function analyzeFinancialFile(type: string, buffer: Buffer, filename: string) {
-  // 本来はここでExcelやPDF等を解析し、BS/PLデータを抽出
-  // 今回はダミーデータを返す
-  if (type === 'bs') {
-    return {
-      type: 'bs',
-      data: {
-        '流動資産': 1200,
-        '固定資産': 800,
-        '流動負債': 900,
-        '固定負債': 500,
-        '純資産': 600,
-      }
-    };
-  } else if (type === 'pl') {
-    return {
-      type: 'pl', 
-      data: {
-        '売上高': 5000,
-        '売上原価': 3000,
-        '販売費及び一般管理費': 1200,
-        '営業利益': 800,
-        '経常利益': 700,
-        '当期純利益': 500,
-      }
-    };
-  }
-  return {
-    type: type,
-    data: {
-      'filename': filename,
-      'size': buffer.length,
-      'uploaded': true
-    }
-  };
-}
 
 export const config = {
   api: {

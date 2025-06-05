@@ -1,10 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { initDatabase, insertFullCompany } from '../../lib/database';
+import fs from 'fs';
+import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     try {
-      await initDatabase();
+      // フォールバック: データベースなしでも企業登録可能
+      let useFallback = false;
+      try {
+        await initDatabase();
+      } catch (dbError) {
+        console.log('Database connection failed, using fallback mode');
+        useFallback = true;
+      }
       
       const {
         name,
@@ -33,11 +42,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         business_categories: business_categories || []
       };
 
-      const companyId = await insertFullCompany(companyData);
+      let companyId;
+      
+      if (!useFallback) {
+        // データベース使用
+        companyId = await insertFullCompany(companyData);
+      } else {
+        // フォールバック: ローカルファイルに保存
+        const companiesDir = path.join(process.cwd(), 'data', 'companies');
+        if (!fs.existsSync(companiesDir)) {
+          fs.mkdirSync(companiesDir, { recursive: true });
+        }
+        
+        companyId = Date.now(); // 簡易ID生成
+        const companyFile = path.join(companiesDir, `company-${companyId}.json`);
+        fs.writeFileSync(companyFile, JSON.stringify({ id: companyId, ...companyData }, null, 2));
+      }
       
       res.status(200).json({
         message: '企業登録が完了しました',
-        companyId: companyId
+        companyId: companyId,
+        mode: useFallback ? 'fallback' : 'database'
       });
       
     } catch (error: any) {

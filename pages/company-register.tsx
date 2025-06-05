@@ -32,6 +32,12 @@ export default function CompanyRegister() {
   });
 
   const [businessCategories, setBusinessCategories] = useState<BusinessCategory[]>([]);
+  const [majorCategories, setMajorCategories] = useState<BusinessCategory[]>([]);
+  const [middleCategories, setMiddleCategories] = useState<BusinessCategory[]>([]);
+  const [minorCategories, setMinorCategories] = useState<BusinessCategory[]>([]);
+  const [selectedMajor, setSelectedMajor] = useState('');
+  const [selectedMiddle, setSelectedMiddle] = useState('');
+  const [selectedMinor, setSelectedMinor] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -42,10 +48,58 @@ export default function CompanyRegister() {
 
   const fetchBusinessCategories = async () => {
     try {
-      const response = await axios.get('/api/business-categories');
-      setBusinessCategories(response.data);
+      const response = await axios.get('/api/business-categories?level=major');
+      setMajorCategories(response.data.categories);
+      setBusinessCategories(response.data.categories); // 後方互換のため
     } catch (error) {
       console.error('事業分類の取得に失敗:', error);
+      // フォールバック: 固定データを使用（日本標準産業分類完全版）
+      const fallbackCategories = [
+        { id: 1, code: 'A', name: '農業・林業' },
+        { id: 2, code: 'B', name: '漁業' },
+        { id: 3, code: 'C', name: '鉱業・採石業・砂利採取業' },
+        { id: 4, code: 'D', name: '建設業' },
+        { id: 5, code: 'E', name: '製造業' },
+        { id: 6, code: 'F', name: '電気・ガス・熱供給・水道業' },
+        { id: 7, code: 'G', name: '情報通信業' },
+        { id: 8, code: 'H', name: '運輸業・郵便業' },
+        { id: 9, code: 'I', name: '卸売業・小売業' },
+        { id: 10, code: 'J', name: '金融業・保険業' },
+        { id: 11, code: 'K', name: '不動産業・物品賃貸業' },
+        { id: 12, code: 'L', name: '学術研究・専門・技術サービス業' },
+        { id: 13, code: 'M', name: '宿泊業・飲食サービス業' },
+        { id: 14, code: 'N', name: '生活関連サービス業・娯楽業' },
+        { id: 15, code: 'O', name: '教育・学習支援業' },
+        { id: 16, code: 'P', name: '医療・福祉' },
+        { id: 17, code: 'Q', name: '複合サービス事業' },
+        { id: 18, code: 'R', name: 'サービス業（他に分類されないもの）' },
+        { id: 19, code: 'S', name: '公務（他に分類されるものを除く）' },
+        { id: 20, code: 'T', name: 'その他' }
+      ];
+      setMajorCategories(fallbackCategories);
+      setBusinessCategories(fallbackCategories);
+    }
+  };
+
+  const fetchMiddleCategories = async (parentId: number) => {
+    try {
+      console.log('Fetching middle categories for parent:', parentId);
+      const response = await axios.get(`/api/business-categories?level=middle&parent_id=${parentId}`);
+      console.log('Middle categories response:', response.data);
+      setMiddleCategories(response.data.categories);
+    } catch (error) {
+      console.error('中分類の取得に失敗:', error);
+      setMiddleCategories([]);
+    }
+  };
+
+  const fetchMinorCategories = async (parentId: number) => {
+    try {
+      const response = await axios.get(`/api/business-categories?level=minor&parent_id=${parentId}`);
+      setMinorCategories(response.data.categories);
+    } catch (error) {
+      console.error('小分類の取得に失敗:', error);
+      setMinorCategories([]);
     }
   };
 
@@ -259,20 +313,170 @@ export default function CompanyRegister() {
 
               {/* 事業分類 */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">事業分類（複数選択可）</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto border border-gray-200 rounded-md p-4">
-                  {businessCategories.map((category) => (
-                    <label key={category.id} className="flex items-center space-x-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={formData.business_categories.includes(category.id)}
-                        onChange={(e) => handleCategoryChange(category.id, e.target.checked)}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700">{category.code}: {category.name}</span>
-                    </label>
-                  ))}
+                <h3 className="text-lg font-medium text-gray-900 mb-4">事業分類（階層選択）</h3>
+                
+                {/* 大分類選択 */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    大分類
+                  </label>
+                  <select
+                    value={selectedMajor}
+                    onChange={(e) => {
+                      console.log('Major category selected:', e.target.value);
+                      setSelectedMajor(e.target.value);
+                      setSelectedMiddle('');
+                      setSelectedMinor('');
+                      setMiddleCategories([]); // リセット
+                      setMinorCategories([]); // リセット
+                      if (e.target.value) {
+                        fetchMiddleCategories(parseInt(e.target.value));
+                      }
+                    }}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- 大分類を選択 --</option>
+                    {majorCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.code}: {category.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* 中分類選択 */}
+                {selectedMajor && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      中分類 (選択肢数: {middleCategories.length})
+                    </label>
+                    <select
+                      value={selectedMiddle}
+                      onChange={(e) => {
+                        console.log('Middle category selected:', e.target.value);
+                        setSelectedMiddle(e.target.value);
+                        setSelectedMinor('');
+                        if (e.target.value) {
+                          fetchMinorCategories(parseInt(e.target.value));
+                        }
+                      }}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">-- 中分類を選択 --</option>
+                      {middleCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.code}: {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 小分類選択 */}
+                {selectedMiddle && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      小分類
+                    </label>
+                    <select
+                      value={selectedMinor}
+                      onChange={(e) => setSelectedMinor(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">-- 小分類を選択 --</option>
+                      {minorCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.code}: {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 選択確定ボタン */}
+                {(selectedMajor || selectedMiddle || selectedMinor) && (
+                  <div className="mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetId = selectedMinor ? parseInt(selectedMinor) : 
+                                        selectedMiddle ? parseInt(selectedMiddle) : 
+                                        parseInt(selectedMajor);
+                        if (targetId && !formData.business_categories.includes(targetId)) {
+                          handleCategoryChange(targetId, true);
+                        }
+                        // リセット
+                        setSelectedMajor('');
+                        setSelectedMiddle('');
+                        setSelectedMinor('');
+                        setMiddleCategories([]);
+                        setMinorCategories([]);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      選択した分類を追加
+                    </button>
+                  </div>
+                )}
+
+                {/* 選択された事業分類の表示 */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    選択済み事業分類
+                  </label>
+                  <div className="min-h-[100px] border border-gray-200 rounded-md p-3 bg-gray-50">
+                    {formData.business_categories.length === 0 ? (
+                      <p className="text-gray-500 text-sm">まだ事業分類が選択されていません</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {formData.business_categories.map((categoryId) => {
+                          // 全ての分類から検索
+                          const category = [...majorCategories, ...middleCategories, ...minorCategories]
+                            .find(c => c.id === categoryId) || businessCategories.find(c => c.id === categoryId);
+                          if (!category) return null;
+                          return (
+                            <div
+                              key={categoryId}
+                              className="flex items-center justify-between bg-blue-100 text-blue-800 px-3 py-2 rounded-md text-sm"
+                            >
+                              <span className="font-medium">
+                                {category.code}: {category.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCategoryChange(categoryId, false)}
+                                className="text-blue-600 hover:text-blue-800 ml-2 font-bold"
+                                title="削除"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* チェックボックス形式（バックアップ表示） */}
+                <details className="mt-4">
+                  <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
+                    チェックボックス形式で選択する場合はこちら
+                  </summary>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-4 bg-gray-50">
+                    {businessCategories.map((category) => (
+                      <label key={category.id} className="flex items-center space-x-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formData.business_categories.includes(category.id)}
+                          onChange={(e) => handleCategoryChange(category.id, e.target.checked)}
+                          className="text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-700">{category.code}: {category.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
               </div>
 
               {/* メモ */}
