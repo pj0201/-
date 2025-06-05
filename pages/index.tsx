@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   useReactTable, getCoreRowModel, flexRender, createColumnHelper, type ColumnDef,
 } from '@tanstack/react-table';
+import Layout from '../components/layout/Layout';
 
 type UploadedFile = {
   id: number;
@@ -62,6 +63,7 @@ const formatValue = (value: number, format?: string, unit?: string) => {
 
 export default function Home() {
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>(['2023', '2022', '2021']);
+  const [companyName, setCompanyName] = useState<string>('株式会社サンプル企業');
   const [metrics] = useState<FinancialMetric[]>([
     // 経営規模
     {
@@ -213,11 +215,36 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <Layout>
+      {/* ヘッダー */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-xl font-semibold text-gray-900">財務指標分析</h1>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900">{companyName}</div>
+                <div className="text-xs text-gray-500">法人名</div>
+              </div>
+              <button 
+                onClick={() => {
+                  const newName = prompt('法人名を入力してください', companyName);
+                  if (newName) setCompanyName(newName);
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                編集
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 sm:px-0">
           <div className="mt-6 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">財務指標分析</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">財務指標一覧</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-300">
                 <thead>
@@ -279,8 +306,9 @@ export default function Home() {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
